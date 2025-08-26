@@ -65,12 +65,24 @@ def convertir_a_clausal(cnf_expr, variables):
     var_index = {v: i+1 for i, v in enumerate(variables)}
 
     def literal_to_int(lit):
-        if lit.is_Symbol:
+        if hasattr(lit, 'is_Symbol') and lit.is_Symbol:
             return var_index[str(lit)]
-        elif lit.func.__name__ == "Not":
+        elif hasattr(lit, 'func') and lit.func.__name__ == "Not":
             return -var_index[str(lit.args[0])]
+        elif str(lit) == "True":
+            # True representa una cláusula vacía que siempre es verdadera
+            return 0  # Usar 0 para indicar tautología (puedes ajustar según tu sistema)
+        elif str(lit) == "False":
+            # False representa una cláusula vacía que siempre es falsa
+            return None  # Usar None para indicar contradicción (puedes ajustar según tu sistema)
         else:
-            raise ValueError("Literal no reconocido")
+            raise ValueError(f"Literal no reconocido: {lit}")
+
+    # Manejo especial para constantes booleanas
+    if str(cnf_expr) == "True":
+        return [[]]  # Tautología: cláusula vacía
+    elif str(cnf_expr) == "False":
+        return []    # Contradicción: no hay cláusulas
 
     if cnf_expr.func.__name__ == "And":
         clausulas = []
