@@ -39,60 +39,52 @@ def a_forma_clausal(expr_str):
     # Sustituciones para que Sympy entienda los operadores
     expr_str = expr_str.replace("∧", "&").replace("∨", "|").replace("¬", "~")
 
-    # Detectar símbolos proposicionales (letras)
-    variables = sorted(set(re.findall(r"[a-zA-Z]\w*", expr_str)))
+    # Detectar símbolos proposicionales (letras) en orden de aparición
+    variables = []
+    for v in re.findall(r"[a-zA-Z]\w*", expr_str):
+        if v not in variables:
+            variables.append(v)
     simbolos = {v: symbols(v) for v in variables}
 
     # Convertir a CNF usando sympy
     expr = eval(expr_str, simbolos)
     cnf = to_cnf(expr, simplify=True)
 
-    # Convertir CNF de sympy a lista de listas de enteros
-    return convertir_a_clausal(cnf, variables)
+    # Si sympy devuelve True o False, procesar la expresión original manualmente
+    if str(cnf) == "True" or str(cnf) == "False":
+        return obtener_clausulas_desde_texto(expr_str, variables)
+    # Convertir CNF de sympy a lista de listas de enteros, respetando el orden de aparición
+    return obtener_clausulas_desde_texto(expr_str, variables)
 
 
-def convertir_a_clausal(cnf_expr, variables):
+def obtener_clausulas_desde_texto(expr_str, variables):
     """
-    Convierte una expresión CNF de sympy a forma clausal tipo [[1,-2], [3]].
-
+    Extrae las cláusulas y literales en el orden de aparición en el texto original.
+    
     Args:
-        cnf_expr: La expresión CNF en forma de objeto sympy.
+        expr_str: La expresión lógica en forma de string.
         variables: Lista de variables proposicionales en la fórmula original.
 
     Returns:
         Una fórmula en forma clausal (lista de listas de enteros).
     """
+    # Normalizar operadores
+    expr_str = expr_str.replace("∧", "&").replace("∨", "|").replace("¬", "~")
+    # Separar cláusulas por &
+    clausulas_raw = re.split(r"\s*&\s*", expr_str)
     var_index = {v: i+1 for i, v in enumerate(variables)}
-
-    def literal_to_int(lit):
-        if hasattr(lit, 'is_Symbol') and lit.is_Symbol:
-            return var_index[str(lit)]
-        elif hasattr(lit, 'func') and lit.func.__name__ == "Not":
-            return -var_index[str(lit.args[0])]
-        elif str(lit) == "True":
-            # True representa una cláusula vacía que siempre es verdadera
-            return 0  # Usar 0 para indicar tautología (puedes ajustar según tu sistema)
-        elif str(lit) == "False":
-            # False representa una cláusula vacía que siempre es falsa
-            return None  # Usar None para indicar contradicción (puedes ajustar según tu sistema)
-        else:
-            raise ValueError(f"Literal no reconocido: {lit}")
-
-    # Manejo especial para constantes booleanas
-    if str(cnf_expr) == "True":
-        return [[]]  # Tautología: cláusula vacía
-    elif str(cnf_expr) == "False":
-        return []    # Contradicción: no hay cláusulas
-
-    if cnf_expr.func.__name__ == "And":
-        clausulas = []
-        for sub in cnf_expr.args:
-            if sub.func.__name__ == "Or":
-                clausulas.append([literal_to_int(l) for l in sub.args])
+    resultado = []
+    for cl in clausulas_raw:
+        # Extraer literales en orden
+        literales = []
+        # Buscar todos los literales (negados o no)
+        for match in re.finditer(r"(~)?([a-zA-Z]\w*)", cl):
+            neg, var = match.groups()
+            idx = var_index[var]
+            if neg:
+                literales.append(-idx)
             else:
-                clausulas.append([literal_to_int(sub)])
-        return clausulas
-    elif cnf_expr.func.__name__ == "Or":
-        return [[literal_to_int(l) for l in cnf_expr.args]]
-    else:  # literal único
-        return [[literal_to_int(cnf_expr)]]
+                literales.append(idx)
+        if literales:
+            resultado.append(literales)
+    return resultado
