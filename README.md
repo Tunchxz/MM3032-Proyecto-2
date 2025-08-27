@@ -51,3 +51,10 @@ proyecto_sat/
 A continuación se muestra una vista previa del proyecto:  
 
 ![Vista previa del proyecto](./output/preview.png)  
+
+> Nota: La salida en consola está conformada por:
+> 1. La fórmula booleana en su forma clausal  
+> 
+> 2. El resultado de la satisfacibilidad lógica  
+> 
+> 3. El tiempo que tardó el algoritmo en encontrar el resultado  
